@@ -1,0 +1,128 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+bin/
+lib/*.a
+lib/*.so
+lib/*.dylib
+lib/*.dll
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+_deps/
+
+# Object files
+*.o
+*.obj
+*.ko
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+test_*
+example_*
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+core
+vgcore.*
+*.stackdump
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+.clangd/
+.cache/
+
+# Visual Studio
+*.sln
+*.vcxproj*
+.vs/
+x64/
+x86/
+Debug/
+Release/
+
+# XCode
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+# Documentation
+docs/html/
+docs/latex/
+*.pdf
+
+# Logs
+*.log
+logs/
+
+# Dependency directories
+vendor/
+node_modules/
+
+# Package files
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Coverage
+*.gcov
+*.gcda
+*.gcno
+coverage/
+*.info
+coverage.xml
+*.cover
+
+# Profiling
+gmon.out
+*.prof
+callgrind.out.*
+
+# Static analysis
+.clang-tidy
+.clang-format
+cppcheck-*
