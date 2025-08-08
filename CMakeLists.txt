@@ -63,10 +63,12 @@ if(COMMON_SOURCES)
     # Also build executables from common sources if they have main()
     foreach(COMMON_SOURCE ${COMMON_SOURCES})
         get_filename_component(COMMON_NAME ${COMMON_SOURCE} NAME_WE)
-        add_executable(${COMMON_NAME} ${COMMON_SOURCE})
-        target_link_libraries(${COMMON_NAME} ${PLATFORM_LIBS})
-        set_target_properties(${COMMON_NAME} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/common)
+        # Use prefixed target name internally, but output with clean name
+        add_executable(common_${COMMON_NAME} ${COMMON_SOURCE})
+        target_link_libraries(common_${COMMON_NAME} ${PLATFORM_LIBS})
+        set_target_properties(common_${COMMON_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/common
+            OUTPUT_NAME ${COMMON_NAME})
     endforeach()
 endif()
 
@@ -75,14 +77,16 @@ file(GLOB_RECURSE SERVER_SOURCES "src/server/*.c" "src/server/*.cpp")
 if(SERVER_SOURCES)
     foreach(SERVER_SOURCE ${SERVER_SOURCES})
         get_filename_component(SERVER_NAME ${SERVER_SOURCE} NAME_WE)
-        add_executable(${SERVER_NAME} ${SERVER_SOURCE})
+        # Use prefixed target name internally, but output with clean name
+        add_executable(server_${SERVER_NAME} ${SERVER_SOURCE})
         if(TARGET common)
-            target_link_libraries(${SERVER_NAME} common ${PLATFORM_LIBS})
+            target_link_libraries(server_${SERVER_NAME} common ${PLATFORM_LIBS})
         else()
-            target_link_libraries(${SERVER_NAME} ${PLATFORM_LIBS})
+            target_link_libraries(server_${SERVER_NAME} ${PLATFORM_LIBS})
         endif()
-        set_target_properties(${SERVER_NAME} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/server)
+        set_target_properties(server_${SERVER_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/server
+            OUTPUT_NAME ${SERVER_NAME})
     endforeach()
 endif()
 
@@ -91,14 +95,16 @@ file(GLOB_RECURSE CLIENT_SOURCES "src/client/*.c" "src/client/*.cpp")
 if(CLIENT_SOURCES)
     foreach(CLIENT_SOURCE ${CLIENT_SOURCES})
         get_filename_component(CLIENT_NAME ${CLIENT_SOURCE} NAME_WE)
-        add_executable(${CLIENT_NAME} ${CLIENT_SOURCE})
+        # Use prefixed target name internally, but output with clean name
+        add_executable(client_${CLIENT_NAME} ${CLIENT_SOURCE})
         if(TARGET common)
-            target_link_libraries(${CLIENT_NAME} common ${PLATFORM_LIBS})
+            target_link_libraries(client_${CLIENT_NAME} common ${PLATFORM_LIBS})
         else()
-            target_link_libraries(${CLIENT_NAME} ${PLATFORM_LIBS})
+            target_link_libraries(client_${CLIENT_NAME} ${PLATFORM_LIBS})
         endif()
-        set_target_properties(${CLIENT_NAME} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/client)
+        set_target_properties(client_${CLIENT_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/client
+            OUTPUT_NAME ${CLIENT_NAME})
     endforeach()
 endif()
 
