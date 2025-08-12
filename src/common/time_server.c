@@ -17,23 +17,24 @@
 
 #endif
 
+/** Preprocessor Macros **/
 #if defined(_WIN32)
 #define ISVALIDSOCKET(s) ((s) != INVALID_SOCKET)
 #define CLOSESOCKET(s) closesocket(s)
 #define GETSOCKETERRNO() (WSAGetLastError())
 
 #else
-#define ISVALIDSOCKET(s) ((s) >= 0)
-#define CLOSESOCKET(s) close(s)
-#define SOCKET int
-#define GETSOCKETERRNO() (errno)
+#define ISVALIDSOCKET(s) ((s) >= 0) // non-negative indicates valid
+#define CLOSESOCKET(s) close(s)     // close a socket function
+#define SOCKET int                  // define data type
+#define GETSOCKETERRNO() (errno)    // get last socket error function
 #endif
 
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
-int main() {
+int main(int argc, char *argv[]) {
 
 #if defined(_WIN32)
   WSADATA d;
@@ -43,24 +44,27 @@ int main() {
   }
 #endif
 
-  printf("Configuring local address...\n");
-
-  struct addrinfo hints;
-
-  memset(&hints, 0, sizeof(hints));
-
+  /** Configure Local Address for Time Server **/
+  printf("Configuring local address for time server...\n");
+  struct addrinfo hints;            // for configuring preferences
+  memset(&hints, 0, sizeof(hints)); // set memory
   hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_flags = AI_PASSIVE;
+  hints.ai_socktype = SOCK_STREAM; // SOCK_STREAM = TCP, SOCK_DGRAM = UDP
+  hints.ai_flags =
+      AI_PASSIVE; // bind to any available network interface" (0.0.0.0) without
+                  // this flag, it would only bind to localhost
 
-  struct addrinfo *bind_address;
+  struct addrinfo *bind_address; // for store the result
 
-  getaddrinfo(0, "8080", &hints, &bind_address);
+  getaddrinfo(0, "8080", &hints,
+              &bind_address); // `8080` used for HTTP traffic; resolve
+                              // infomation for binding
 
   printf("Creating socket...\n");
   SOCKET socket_listen;
   socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype,
                          bind_address->ai_protocol);
+
   if (!ISVALIDSOCKET(socket_listen)) {
     fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
     return 1;
@@ -71,6 +75,7 @@ int main() {
     fprintf(stderr, "bind() failed. (%d)\n", GETSOCKETERRNO());
     return 1;
   }
+
   freeaddrinfo(bind_address);
 
   printf("Listening...\n");
@@ -129,3 +134,9 @@ int main() {
 
   return 0;
 }
+
+/*
+ * Test with `curl http://localhost:8080`
+ *
+ *
+ * */

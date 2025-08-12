@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <time.h>
 
-int main() {
-  time_t timer;
-  time(&timer);
+int main(void) {
+  time_t timer; // declare a var of type time_t``
+  time(&timer); // fills pointer `timers` with current time
 
-  printf("Local time is: %s", ctime(&timer));
+  char *read_time = ctime(&timer); // convert to readable time
+
+  printf("Local time is: %s", read_time);
 
   return 0;
 }
