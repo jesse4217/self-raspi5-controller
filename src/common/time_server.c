@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
   getaddrinfo(0, "8080", &hints,
               &bind_address); // `8080` used for HTTP traffic; resolve
                               // infomation for binding
+  // Keep in mind that only one program can bind to a particular port at a time
 
   printf("Creating socket...\n");
   SOCKET socket_listen;
