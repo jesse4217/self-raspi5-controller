@@ -49,6 +49,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/server)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/client)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/common)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/hq-cam-controller)
 
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -105,6 +106,24 @@ if(CLIENT_SOURCES)
         set_target_properties(client_${CLIENT_NAME} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/client
             OUTPUT_NAME ${CLIENT_NAME})
+    endforeach()
+endif()
+
+# HQ Camera Controller executables
+file(GLOB_RECURSE HQ_CAM_SOURCES "src/hq-cam-controller/*.c" "src/hq-cam-controller/*.cpp")
+if(HQ_CAM_SOURCES)
+    foreach(HQ_CAM_SOURCE ${HQ_CAM_SOURCES})
+        get_filename_component(HQ_CAM_NAME ${HQ_CAM_SOURCE} NAME_WE)
+        # Use prefixed target name internally, but output with clean name
+        add_executable(hq_cam_${HQ_CAM_NAME} ${HQ_CAM_SOURCE})
+        if(TARGET common)
+            target_link_libraries(hq_cam_${HQ_CAM_NAME} common ${PLATFORM_LIBS})
+        else()
+            target_link_libraries(hq_cam_${HQ_CAM_NAME} ${PLATFORM_LIBS})
+        endif()
+        set_target_properties(hq_cam_${HQ_CAM_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/hq-cam-controller
+            OUTPUT_NAME ${HQ_CAM_NAME})
     endforeach()
 endif()
 

@@ -39,6 +39,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "connect() failed. (%d)\n", GETSOCKETERRNO());
     return 1;
   }
+
   freeaddrinfo(peer_address);
 
   printf("Connected.\n");
@@ -78,7 +79,7 @@ int main(int argc, char *argv[]) {
       int bytes_sent = send(socket_peer, read, strlen(read), 0);
       printf("Sent %d bytes.\n", bytes_sent);
     }
-  } // end while(1)
+  }
 
   printf("Closing socket...\n");
   CLOSESOCKET(socket_peer);
