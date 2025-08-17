@@ -95,3 +95,10 @@ The analysis report (`docs/sc-init.md`) identifies critical buffer overflow vuln
 2. Consolidate duplicate UDP implementations
 3. Create shared constants for ports and buffer sizes
 4. Add comprehensive input validation
+
+## Coding Standards
+
+### Output and Logging Rules
+- **No emojis or icons**: All console output, logging, and user messages must use plain text only
+- Use text prefixes instead of emojis: `SUCCESS`, `ERROR`, `WARNING`, `[ONLINE]`, `[OFFLINE]`
+- Keep output clean and terminal-friendly for all environments
