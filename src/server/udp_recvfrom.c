@@ -1,14 +1,6 @@
-#include "server/udp.h"
+#include "udp.h"
 
 int main() {
-
-#if defined(_WIN32)
-  WSADATA d;
-  if (WSAStartup(MAKEWORD(2, 2), &d)) {
-    fprintf(stderr, "Failed to initialize.\n");
-    return 1;
-  }
-#endif
 
   printf("Configuring local address...\n");
   struct addrinfo hints;
@@ -54,10 +46,6 @@ int main() {
   printf("%s %s\n", address_buffer, service_buffer);
 
   CLOSESOCKET(socket_listen);
-
-#if defined(_WIN32)
-  WSACleanup();
-#endif
 
   printf("Finished.\n");
   return 0;

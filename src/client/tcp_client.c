@@ -1,13 +1,14 @@
-#include "client/tcp.h"
+#include "tcp.h"
 
 int main(int argc, char *argv[]) {
 
   if (argc < 3) {
-    fprintf(stderr, "usage: tcp_client hostname port\n");
+    fprintf(stderr, "usage: ./program hostname port\n");
     return 1;
   }
 
-  printf("Configuring remote address...\n");
+  // 1
+  printf("Resolving Server Address...\n");
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
   hints.ai_socktype = SOCK_STREAM;
@@ -17,7 +18,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  printf("Remote address is: ");
+  printf("server address is: ");
   char address_buffer[100];
   char service_buffer[100];
   getnameinfo(peer_address->ai_addr, peer_address->ai_addrlen, address_buffer,
@@ -25,7 +26,8 @@ int main(int argc, char *argv[]) {
               NI_NUMERICHOST);
   printf("%s %s\n", address_buffer, service_buffer);
 
-  printf("Creating socket...\n");
+  // 2
+  printf("Creating Socket...\n");
   SOCKET socket_peer;
   socket_peer = socket(peer_address->ai_family, peer_address->ai_socktype,
                        peer_address->ai_protocol);
@@ -34,6 +36,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // 3
   printf("Connecting...\n");
   if (connect(socket_peer, peer_address->ai_addr, peer_address->ai_addrlen)) {
     fprintf(stderr, "connect() failed. (%d)\n", GETSOCKETERRNO());
@@ -47,6 +50,7 @@ int main(int argc, char *argv[]) {
 
   while (1) {
 
+    // file descriptor
     fd_set reads;
     FD_ZERO(&reads);
     FD_SET(socket_peer, &reads);

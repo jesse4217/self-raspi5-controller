@@ -1,12 +1,3 @@
-#if defined(_WIN32)
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0600
-#endif
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-
-#else
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
@@ -15,53 +6,46 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#endif
-
-/** Preprocessor Macros **/
-#if defined(_WIN32)
-#define ISVALIDSOCKET(s) ((s) != INVALID_SOCKET)
-#define CLOSESOCKET(s) closesocket(s)
-#define GETSOCKETERRNO() (WSAGetLastError())
-
-#else
 #define ISVALIDSOCKET(s) ((s) >= 0) // non-negative indicates valid
 #define CLOSESOCKET(s) close(s)     // close a socket function
 #define SOCKET int                  // define data type
 #define GETSOCKETERRNO() (errno)    // get last socket error function
-#endif
 
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 
-int main(int argc, char *argv[]) {
+struct addrinfo *configureLocalAddress(const char *port) {
+  printf("Configuring local address for time server...\n");
 
-#if defined(_WIN32)
-  WSADATA d;
-  if (WSAStartup(MAKEWORD(2, 2), &d)) {
-    fprintf(stderr, "Failed to initialize.\n");
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_PASSIVE;
+
+  struct addrinfo *bind_address;
+
+  int ret = getaddrinfo(0, port, &hints, &bind_address);
+
+  if (ret != 0) {
+    fprintf(stderr, "getaddrinfo() failed: %s \n", errno);
+    return NULL;
+  }
+
+  return bind_address;
+}
+
+int main(int argc, char *argv[]) {
+  const char *port = "8080";
+  struct addrinfo *bind_address = configureLocalAddress(port);
+
+  if (!bind_address) {
     return 1;
   }
-#endif
-
-  /** Configure Local Address for Time Server **/
-  printf("Configuring local address for time server...\n");
-  struct addrinfo hints;            // for configuring preferences
-  memset(&hints, 0, sizeof(hints)); // set memory
-  hints.ai_family = AF_INET;
-  hints.ai_socktype = SOCK_STREAM; // SOCK_STREAM = TCP, SOCK_DGRAM = UDP
-  hints.ai_flags =
-      AI_PASSIVE; // bind to any available network interface" (0.0.0.0) without
-                  // this flag, it would only bind to localhost
-
-  struct addrinfo *bind_address; // for store the result
-
-  getaddrinfo(0, "8080", &hints,
-              &bind_address); // `8080` used for HTTP traffic; resolve
-                              // infomation for binding
-  // Keep in mind that only one program can bind to a particular port at a time
 
   printf("Creating socket...\n");
+
   SOCKET socket_listen;
   socket_listen = socket(bind_address->ai_family, bind_address->ai_socktype,
                          bind_address->ai_protocol);
@@ -127,17 +111,7 @@ int main(int argc, char *argv[]) {
   printf("Closing listening socket...\n");
   CLOSESOCKET(socket_listen);
 
-#if defined(_WIN32)
-  WSACleanup();
-#endif
-
   printf("Finished.\n");
 
   return 0;
 }
-
-/*
- * Test with `curl http://localhost:8080`
- *
- *
- * */

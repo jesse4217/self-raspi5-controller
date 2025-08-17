@@ -1,4 +1,5 @@
-#include "client/tcp.h"
+#include "tcp.h"
+#include <stdlib.h>
 
 #define BUFFER_SIZE 4096
 #define ADDRESS_BUFFER_SIZE 100

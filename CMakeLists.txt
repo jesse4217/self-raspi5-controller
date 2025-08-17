@@ -52,7 +52,7 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/common)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/hq-cam-controller)
 
 # Include directories
-include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/inc)
 
 # Common library and executables
 file(GLOB_RECURSE COMMON_SOURCES "src/common/*.c" "src/common/*.cpp")
@@ -161,7 +161,7 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/ DESTINATION bin
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
                     GROUP_EXECUTE GROUP_READ
                     WORLD_EXECUTE WORLD_READ)
-install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY inc/ DESTINATION include)
 
 # Print configuration
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

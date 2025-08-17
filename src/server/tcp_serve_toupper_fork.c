@@ -1,8 +1,4 @@
-#if defined(_WIN32)
-#error This program does not support Windows.
-#endif
-
-#include "server/tcp.h"
+#include "tcp.h"
 #include <ctype.h>
 #include <stdlib.h>
 

@@ -1,4 +1,4 @@
-#include "server/udp.h"
+#include "udp.h"
 #include <ctype.h>
 
 int main() {

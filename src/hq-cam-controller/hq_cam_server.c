@@ -1,5 +1,6 @@
-#include "server/tcp.h"
+#include "tcp.h"
 #include <ctype.h>
+#include <stdlib.h>
 
 int main() {
 
