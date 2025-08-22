@@ -50,9 +50,10 @@ int main(int argc, char *argv[]) {
 
   printf("[ONLINE] Time Request Client ready.\n");
   printf("Commands:\n");
-  printf("  time    - Request time from all sub-clients\n");
-  printf("  status  - Show connection status\n");
-  printf("  quit    - Exit program\n\n");
+  printf("  [4] - Request time from all sub-clients\n");
+  printf("  [5] - Execute 'ls' on all sub-clients\n");
+  printf("  [9] - Show connection status\n");
+  printf("  [0] - Exit program\n\n");
 
   while (1) {
     fd_set reads;
@@ -92,6 +93,25 @@ int main(int argc, char *argv[]) {
           if (sscanf(response_data, "%31[^:]:%63s", device_id, timestamp) == 2) {
             print_timestamp();
             printf("[%s] Time: %s\n", device_id, timestamp);
+          }
+        } else if (strncmp(read, "LS_RESPONSE:", 12) == 0) {
+          // Parse ls response
+          char *response_data = read + 12;
+          char device_id[DEVICE_ID_SIZE];
+          char *colon = strchr(response_data, ':');
+          
+          if (colon) {
+            int id_len = colon - response_data;
+            if (id_len < DEVICE_ID_SIZE) {
+              strncpy(device_id, response_data, id_len);
+              device_id[id_len] = '\0';
+              
+              print_timestamp();
+              printf("[%s] Directory listing:\n", device_id);
+              printf("----------------------------------------\n");
+              printf("%s", colon + 2);  // Skip the colon and newline
+              printf("----------------------------------------\n");
+            }
           }
         } else if (strncmp(read, "TIME_RESPONSES:", 15) == 0) {
           // Handle old aggregated format (for compatibility)
@@ -139,10 +159,10 @@ int main(int argc, char *argv[]) {
         input[len-1] = '\0';
       }
       
-      if (strcmp(input, "quit") == 0) {
+      if (strcmp(input, "0") == 0) {
         printf("Exiting...\n");
         break;
-      } else if (strcmp(input, "time") == 0) {
+      } else if (strcmp(input, "4") == 0) {
         // Send time request
         const char *request = MSG_TIME_REQUEST "\n";
         
@@ -156,13 +176,27 @@ int main(int argc, char *argv[]) {
         } else {
           printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
         }
-      } else if (strcmp(input, "status") == 0) {
+      } else if (strcmp(input, "5") == 0) {
+        // Send ls request
+        const char *request = MSG_LS_REQUEST "\n";
+        
+        print_timestamp();
+        printf("Sending LS_REQUEST to relay server...\n");
+        
+        int bytes_sent = sendto(socket_peer, request, strlen(request), 0,
+                              peer_address->ai_addr, peer_address->ai_addrlen);
+        if (bytes_sent < 0) {
+          printf("ERROR: Failed to send request. (%d)\n", GETSOCKETERRNO());
+        } else {
+          printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
+        }
+      } else if (strcmp(input, "9") == 0) {
         print_timestamp();
         printf("Connected to relay server at %s:%s\n", address_buffer, service_buffer);
         printf("Socket: %d\n", socket_peer);
       } else if (strlen(input) > 0) {
         printf("Unknown command: %s\n", input);
-        printf("Valid commands: time, status, quit\n");
+        printf("Valid commands: [4] time, [5] ls, [9] status, [0] quit\n");
       }
     }
   } // end while(1)

@@ -114,7 +114,7 @@ int main() {
 
   printf("[ONLINE] Time Relay Server ready on port %s\n", RELAY_SERVER_PORT);
   printf("Listening on all interfaces (0.0.0.0)\n");
-  printf("Supported commands: REGISTER, TIME_REQUEST, HEARTBEAT\n\n");
+  printf("Supported commands: REGISTER, TIME_REQUEST, LS_REQUEST, HEARTBEAT\n\n");
 
   // Variables for storing main client info when forwarding
   struct sockaddr_storage main_client_addr;
@@ -201,6 +201,20 @@ int main() {
         // Forward to all sub-clients
         forward_to_subclients(socket_listen, read, bytes_received);
         
+      } else if (strncmp(read, MSG_LS_REQUEST, strlen(MSG_LS_REQUEST)) == 0) {
+        // Handle ls request from main client
+        printf("Processing LS_REQUEST from main client\n");
+        
+        // Store main client info
+        main_client_addr = client_address;
+        main_client_len = client_len;
+        waiting_for_responses = 1;
+        forward_start_time = time(NULL);
+        response_count = 0;
+        
+        // Forward to all sub-clients
+        forward_to_subclients(socket_listen, read, bytes_received);
+        
       } else if (strncmp(read, MSG_TIME_RESPONSE ":", strlen(MSG_TIME_RESPONSE ":")) == 0) {
         // Handle time response from sub-client - forward immediately
         if (waiting_for_responses) {
@@ -232,6 +246,35 @@ int main() {
               waiting_for_responses = 0;
               response_count = 0;
             }
+          }
+        }
+        
+      } else if (strncmp(read, MSG_LS_RESPONSE ":", strlen(MSG_LS_RESPONSE ":")) == 0) {
+        // Handle ls response from sub-client - forward immediately
+        if (waiting_for_responses) {
+          // Forward the entire ls response to main client
+          sendto(socket_listen, read, bytes_received, 0,
+                 (struct sockaddr *)&main_client_addr, main_client_len);
+          
+          // Extract device ID for logging
+          char *response_data = read + strlen(MSG_LS_RESPONSE ":");
+          char device_id[DEVICE_ID_SIZE];
+          if (sscanf(response_data, "%31[^:]", device_id) == 1) {
+            printf("Forwarded LS response from %s\n", device_id);
+          }
+          
+          response_count++;
+          
+          // Check if all active clients have responded
+          int active_client_count = 0;
+          for (int i = 0; i < client_count; i++) {
+            if (clients[i].active) active_client_count++;
+          }
+          
+          if (response_count >= active_client_count) {
+            printf("All %d clients have responded to LS request\n", response_count);
+            waiting_for_responses = 0;
+            response_count = 0;
           }
         }
         

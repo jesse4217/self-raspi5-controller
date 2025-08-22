@@ -2,6 +2,7 @@
 #include "time_protocol.h"
 #include <time.h>
 #include <signal.h>
+#include <stdlib.h>
 
 // Global variables for graceful shutdown
 static volatile int keep_running = 1;
@@ -170,6 +171,46 @@ int main(int argc, char *argv[]) {
             printf("ERROR: Failed to send time response\n");
           } else {
             printf("Sent time response: %s", response);
+          }
+        } else if (strncmp(read, MSG_LS_REQUEST, strlen(MSG_LS_REQUEST)) == 0) {
+          // Execute ls command
+          printf("Executing ls command...\n");
+          
+          // Use popen to execute ls and capture output
+          FILE *fp = popen("ls -la", "r");
+          if (fp == NULL) {
+            printf("ERROR: Failed to execute ls command\n");
+          } else {
+            char ls_output[MSG_BUFFER_SIZE - 100];  // Leave space for header
+            char line[256];
+            int offset = 0;
+            
+            // Read ls output
+            while (fgets(line, sizeof(line), fp) != NULL && 
+                   offset < (MSG_BUFFER_SIZE - 200)) {
+              int line_len = strlen(line);
+              if (offset + line_len < MSG_BUFFER_SIZE - 200) {
+                memcpy(ls_output + offset, line, line_len);
+                offset += line_len;
+              } else {
+                break;  // Buffer full
+              }
+            }
+            ls_output[offset] = '\0';
+            pclose(fp);
+            
+            // Send ls response
+            char response[MSG_BUFFER_SIZE];
+            snprintf(response, sizeof(response), "%s:%s:\n%s", 
+                    MSG_LS_RESPONSE, device_id, ls_output);
+            
+            int resp_sent = sendto(socket_peer, response, strlen(response), 0,
+                                 (struct sockaddr *)&sender_address, sender_len);
+            if (resp_sent < 0) {
+              printf("ERROR: Failed to send ls response\n");
+            } else {
+              printf("Sent ls response (%d bytes)\n", resp_sent);
+            }
           }
         }
       }
