@@ -2,6 +2,8 @@
 #define TIME_PROTOCOL_H
 
 #include <time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 // Port definitions
 #define RELAY_SERVER_PORT "8080"
