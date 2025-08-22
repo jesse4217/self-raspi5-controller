@@ -50,8 +50,10 @@ int main(int argc, char *argv[]) {
 
   printf("[ONLINE] Time Request Client ready.\n");
   printf("Commands:\n");
+  printf("  [3] - Capture photo on all sub-clients\n");
   printf("  [4] - Request time from all sub-clients\n");
   printf("  [5] - Execute 'ls' on all sub-clients\n");
+  printf("  [8] - Upload images to S3 from all sub-clients\n");
   printf("  [9] - Show connection status\n");
   printf("  [0] - Exit program\n\n");
 
@@ -113,6 +115,58 @@ int main(int argc, char *argv[]) {
               printf("----------------------------------------\n");
             }
           }
+        } else if (strncmp(read, "CAMERA_RESPONSE:", 16) == 0) {
+          // Parse camera response
+          char *response_data = read + 16;
+          char device_id[DEVICE_ID_SIZE];
+          char *colon = strchr(response_data, ':');
+          
+          if (colon) {
+            int id_len = colon - response_data;
+            if (id_len < DEVICE_ID_SIZE) {
+              strncpy(device_id, response_data, id_len);
+              device_id[id_len] = '\0';
+              
+              print_timestamp();
+              printf("[%s] Camera capture: ", device_id);
+              
+              // Check if SUCCESS or ERROR
+              char *status = colon + 1;
+              if (strncmp(status, "SUCCESS:", 8) == 0) {
+                printf("SUCCESS - %s", status + 8);
+              } else if (strncmp(status, "ERROR:", 6) == 0) {
+                printf("ERROR - %s", status + 6);
+              } else {
+                printf("%s", status);
+              }
+            }
+          }
+        } else if (strncmp(read, "S3_UPLOAD_RESPONSE:", 19) == 0) {
+          // Parse S3 upload response
+          char *response_data = read + 19;
+          char device_id[DEVICE_ID_SIZE];
+          char *colon = strchr(response_data, ':');
+          
+          if (colon) {
+            int id_len = colon - response_data;
+            if (id_len < DEVICE_ID_SIZE) {
+              strncpy(device_id, response_data, id_len);
+              device_id[id_len] = '\0';
+              
+              print_timestamp();
+              printf("[%s] S3 Upload: ", device_id);
+              
+              // Check if SUCCESS or ERROR
+              char *status = colon + 1;
+              if (strncmp(status, "SUCCESS:", 8) == 0) {
+                printf("SUCCESS - %s", status + 8);
+              } else if (strncmp(status, "ERROR:", 6) == 0) {
+                printf("ERROR - %s", status + 6);
+              } else {
+                printf("%s", status);
+              }
+            }
+          }
         } else if (strncmp(read, "TIME_RESPONSES:", 15) == 0) {
           // Handle old aggregated format (for compatibility)
           print_timestamp();
@@ -162,6 +216,20 @@ int main(int argc, char *argv[]) {
       if (strcmp(input, "0") == 0) {
         printf("Exiting...\n");
         break;
+      } else if (strcmp(input, "3") == 0) {
+        // Send camera request
+        const char *request = MSG_CAMERA_REQUEST "\n";
+        
+        print_timestamp();
+        printf("Sending CAMERA_REQUEST to relay server...\n");
+        
+        int bytes_sent = sendto(socket_peer, request, strlen(request), 0,
+                              peer_address->ai_addr, peer_address->ai_addrlen);
+        if (bytes_sent < 0) {
+          printf("ERROR: Failed to send request. (%d)\n", GETSOCKETERRNO());
+        } else {
+          printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
+        }
       } else if (strcmp(input, "4") == 0) {
         // Send time request
         const char *request = MSG_TIME_REQUEST "\n";
@@ -190,13 +258,28 @@ int main(int argc, char *argv[]) {
         } else {
           printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
         }
+      } else if (strcmp(input, "8") == 0) {
+        // Send S3 upload request
+        const char *request = MSG_S3_UPLOAD_REQUEST "\n";
+        
+        print_timestamp();
+        printf("Sending S3_UPLOAD_REQUEST to relay server...\n");
+        printf("Images will be uploaded to s3://berryscan-dome-scanner/{date}/{time}/\n");
+        
+        int bytes_sent = sendto(socket_peer, request, strlen(request), 0,
+                              peer_address->ai_addr, peer_address->ai_addrlen);
+        if (bytes_sent < 0) {
+          printf("ERROR: Failed to send request. (%d)\n", GETSOCKETERRNO());
+        } else {
+          printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
+        }
       } else if (strcmp(input, "9") == 0) {
         print_timestamp();
         printf("Connected to relay server at %s:%s\n", address_buffer, service_buffer);
         printf("Socket: %d\n", socket_peer);
       } else if (strlen(input) > 0) {
         printf("Unknown command: %s\n", input);
-        printf("Valid commands: [4] time, [5] ls, [9] status, [0] quit\n");
+        printf("Valid commands: [3] camera, [4] time, [5] ls, [8] S3 upload, [9] status, [0] quit\n");
       }
     }
   } // end while(1)

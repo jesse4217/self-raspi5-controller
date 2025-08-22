@@ -114,7 +114,7 @@ int main() {
 
   printf("[ONLINE] Time Relay Server ready on port %s\n", RELAY_SERVER_PORT);
   printf("Listening on all interfaces (0.0.0.0)\n");
-  printf("Supported commands: REGISTER, TIME_REQUEST, LS_REQUEST, HEARTBEAT\n\n");
+  printf("Supported commands: REGISTER, TIME_REQUEST, LS_REQUEST, CAMERA_REQUEST, S3_UPLOAD_REQUEST, HEARTBEAT\n\n");
 
   // Variables for storing main client info when forwarding
   struct sockaddr_storage main_client_addr;
@@ -215,6 +215,34 @@ int main() {
         // Forward to all sub-clients
         forward_to_subclients(socket_listen, read, bytes_received);
         
+      } else if (strncmp(read, MSG_CAMERA_REQUEST, strlen(MSG_CAMERA_REQUEST)) == 0) {
+        // Handle camera request from main client
+        printf("Processing CAMERA_REQUEST from main client\n");
+        
+        // Store main client info
+        main_client_addr = client_address;
+        main_client_len = client_len;
+        waiting_for_responses = 1;
+        forward_start_time = time(NULL);
+        response_count = 0;
+        
+        // Forward to all sub-clients
+        forward_to_subclients(socket_listen, read, bytes_received);
+        
+      } else if (strncmp(read, MSG_S3_UPLOAD_REQUEST, strlen(MSG_S3_UPLOAD_REQUEST)) == 0) {
+        // Handle S3 upload request from main client
+        printf("Processing S3_UPLOAD_REQUEST from main client\n");
+        
+        // Store main client info
+        main_client_addr = client_address;
+        main_client_len = client_len;
+        waiting_for_responses = 1;
+        forward_start_time = time(NULL);
+        response_count = 0;
+        
+        // Forward to all sub-clients
+        forward_to_subclients(socket_listen, read, bytes_received);
+        
       } else if (strncmp(read, MSG_TIME_RESPONSE ":", strlen(MSG_TIME_RESPONSE ":")) == 0) {
         // Handle time response from sub-client - forward immediately
         if (waiting_for_responses) {
@@ -273,6 +301,64 @@ int main() {
           
           if (response_count >= active_client_count) {
             printf("All %d clients have responded to LS request\n", response_count);
+            waiting_for_responses = 0;
+            response_count = 0;
+          }
+        }
+        
+      } else if (strncmp(read, MSG_CAMERA_RESPONSE ":", strlen(MSG_CAMERA_RESPONSE ":")) == 0) {
+        // Handle camera response from sub-client - forward immediately
+        if (waiting_for_responses) {
+          // Forward the entire camera response to main client
+          sendto(socket_listen, read, bytes_received, 0,
+                 (struct sockaddr *)&main_client_addr, main_client_len);
+          
+          // Extract device ID for logging
+          char *response_data = read + strlen(MSG_CAMERA_RESPONSE ":");
+          char device_id[DEVICE_ID_SIZE];
+          if (sscanf(response_data, "%31[^:]", device_id) == 1) {
+            printf("Forwarded CAMERA response from %s\n", device_id);
+          }
+          
+          response_count++;
+          
+          // Check if all active clients have responded
+          int active_client_count = 0;
+          for (int i = 0; i < client_count; i++) {
+            if (clients[i].active) active_client_count++;
+          }
+          
+          if (response_count >= active_client_count) {
+            printf("All %d clients have responded to CAMERA request\n", response_count);
+            waiting_for_responses = 0;
+            response_count = 0;
+          }
+        }
+        
+      } else if (strncmp(read, MSG_S3_UPLOAD_RESPONSE ":", strlen(MSG_S3_UPLOAD_RESPONSE ":")) == 0) {
+        // Handle S3 upload response from sub-client - forward immediately
+        if (waiting_for_responses) {
+          // Forward the entire S3 upload response to main client
+          sendto(socket_listen, read, bytes_received, 0,
+                 (struct sockaddr *)&main_client_addr, main_client_len);
+          
+          // Extract device ID for logging
+          char *response_data = read + strlen(MSG_S3_UPLOAD_RESPONSE ":");
+          char device_id[DEVICE_ID_SIZE];
+          if (sscanf(response_data, "%31[^:]", device_id) == 1) {
+            printf("Forwarded S3_UPLOAD response from %s\n", device_id);
+          }
+          
+          response_count++;
+          
+          // Check if all active clients have responded
+          int active_client_count = 0;
+          for (int i = 0; i < client_count; i++) {
+            if (clients[i].active) active_client_count++;
+          }
+          
+          if (response_count >= active_client_count) {
+            printf("All %d clients have responded to S3_UPLOAD request\n", response_count);
             waiting_for_responses = 0;
             response_count = 0;
           }
