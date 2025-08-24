@@ -50,6 +50,7 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/server)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/client)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/common)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/hq-cam-controller)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/pi-zero-libcam)
 
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/inc)
@@ -124,6 +125,23 @@ if(HQ_CAM_SOURCES)
         set_target_properties(hq_cam_${HQ_CAM_NAME} PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/hq-cam-controller
             OUTPUT_NAME ${HQ_CAM_NAME})
+    endforeach()
+endif()
+
+# Pi Zero LibCam executables (including time system)
+file(GLOB PI_ZERO_SOURCES "src/app/pi-zero-libcam/*.c")
+if(PI_ZERO_SOURCES)
+    # Include directory for time_protocol.h
+    include_directories(${PROJECT_SOURCE_DIR}/src/app/pi-zero-libcam)
+    
+    foreach(PI_ZERO_SOURCE ${PI_ZERO_SOURCES})
+        get_filename_component(PI_ZERO_NAME ${PI_ZERO_SOURCE} NAME_WE)
+        # Use prefixed target name internally, but output with clean name
+        add_executable(pi_zero_${PI_ZERO_NAME} ${PI_ZERO_SOURCE})
+        target_link_libraries(pi_zero_${PI_ZERO_NAME} ${PLATFORM_LIBS})
+        set_target_properties(pi_zero_${PI_ZERO_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/pi-zero-libcam
+            OUTPUT_NAME ${PI_ZERO_NAME})
     endforeach()
 endif()
 

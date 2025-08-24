@@ -1,0 +1,293 @@
+#include "udp.h"
+#include "time_protocol.h"
+#include <time.h>
+
+void print_timestamp() {
+  time_t now = time(NULL);
+  char time_buffer[26];
+  struct tm *tm_info = localtime(&now);
+  strftime(time_buffer, 26, "%Y-%m-%d %H:%M:%S", tm_info);
+  printf("[%s] ", time_buffer);
+}
+
+int main(int argc, char *argv[]) {
+
+  if (argc < 2) {
+    fprintf(stderr, "usage: %s relay_server_hostname [port]\n", argv[0]);
+    fprintf(stderr, "example: %s 192.168.1.100 8080\n", argv[0]);
+    return 1;
+  }
+  
+  const char *hostname = argv[1];
+  const char *port = (argc >= 3) ? argv[2] : RELAY_SERVER_PORT;
+
+  printf("Configuring relay server address...\n");
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_socktype = SOCK_DGRAM;
+  struct addrinfo *peer_address;
+  if (getaddrinfo(hostname, port, &hints, &peer_address)) {
+    fprintf(stderr, "getaddrinfo() failed. (%d)\n", GETSOCKETERRNO());
+    return 1;
+  }
+
+  printf("Relay server address is: ");
+  char address_buffer[ADDRESS_BUFFER_SIZE];
+  char service_buffer[100];
+  getnameinfo(peer_address->ai_addr, peer_address->ai_addrlen, address_buffer,
+              sizeof(address_buffer), service_buffer, sizeof(service_buffer),
+              NI_NUMERICHOST);
+  printf("%s port %s\n", address_buffer, service_buffer);
+
+  printf("Creating socket...\n");
+  SOCKET socket_peer;
+  socket_peer = socket(peer_address->ai_family, peer_address->ai_socktype,
+                       peer_address->ai_protocol);
+  if (!ISVALIDSOCKET(socket_peer)) {
+    fprintf(stderr, "socket() failed. (%d)\n", GETSOCKETERRNO());
+    return 1;
+  }
+
+  printf("[ONLINE] Time Request Client ready.\n");
+  printf("Commands:\n");
+  printf("  [3] - Capture photo on all sub-clients\n");
+  printf("  [4] - Request time from all sub-clients\n");
+  printf("  [5] - Execute 'ls' on all sub-clients\n");
+  printf("  [8] - Upload images to S3 from all sub-clients\n");
+  printf("  [9] - Show connection status\n");
+  printf("  [0] - Exit program\n\n");
+
+  while (1) {
+    fd_set reads;
+    FD_ZERO(&reads);
+    FD_SET(socket_peer, &reads);
+    FD_SET(0, &reads);  // stdin
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 100000;  // 100ms
+
+    if (select(socket_peer + 1, &reads, 0, 0, &timeout) < 0) {
+      fprintf(stderr, "select() failed. (%d)\n", GETSOCKETERRNO());
+      return 1;
+    }
+
+    // Check for server responses
+    if (FD_ISSET(socket_peer, &reads)) {
+      char read[MSG_BUFFER_SIZE];
+      struct sockaddr_storage sender_address;
+      socklen_t sender_len = sizeof(sender_address);
+      
+      int bytes_received = recvfrom(socket_peer, read, MSG_BUFFER_SIZE - 1, 0,
+                                   (struct sockaddr *)&sender_address, &sender_len);
+      if (bytes_received < 1) {
+        printf("\nERROR: Failed to receive response\n");
+      } else {
+        // Null terminate
+        read[bytes_received] = '\0';
+        
+        // Parse individual response
+        if (strncmp(read, "TIME_RESPONSE:", 14) == 0) {
+          char *response_data = read + 14;
+          char device_id[DEVICE_ID_SIZE];
+          char timestamp[64];
+          
+          if (sscanf(response_data, "%31[^:]:%63s", device_id, timestamp) == 2) {
+            print_timestamp();
+            printf("[%s] Time: %s\n", device_id, timestamp);
+          }
+        } else if (strncmp(read, "LS_RESPONSE:", 12) == 0) {
+          // Parse ls response
+          char *response_data = read + 12;
+          char device_id[DEVICE_ID_SIZE];
+          char *colon = strchr(response_data, ':');
+          
+          if (colon) {
+            int id_len = colon - response_data;
+            if (id_len < DEVICE_ID_SIZE) {
+              strncpy(device_id, response_data, id_len);
+              device_id[id_len] = '\0';
+              
+              print_timestamp();
+              printf("[%s] Directory listing:\n", device_id);
+              printf("----------------------------------------\n");
+              printf("%s", colon + 2);  // Skip the colon and newline
+              printf("----------------------------------------\n");
+            }
+          }
+        } else if (strncmp(read, "CAMERA_RESPONSE:", 16) == 0) {
+          // Parse camera response
+          char *response_data = read + 16;
+          char device_id[DEVICE_ID_SIZE];
+          char *colon = strchr(response_data, ':');
+          
+          if (colon) {
+            int id_len = colon - response_data;
+            if (id_len < DEVICE_ID_SIZE) {
+              strncpy(device_id, response_data, id_len);
+              device_id[id_len] = '\0';
+              
+              print_timestamp();
+              printf("[%s] Camera capture: ", device_id);
+              
+              // Check if SUCCESS or ERROR
+              char *status = colon + 1;
+              if (strncmp(status, "SUCCESS:", 8) == 0) {
+                printf("SUCCESS - %s", status + 8);
+              } else if (strncmp(status, "ERROR:", 6) == 0) {
+                printf("ERROR - %s", status + 6);
+              } else {
+                printf("%s", status);
+              }
+            }
+          }
+        } else if (strncmp(read, "S3_UPLOAD_RESPONSE:", 19) == 0) {
+          // Parse S3 upload response
+          char *response_data = read + 19;
+          char device_id[DEVICE_ID_SIZE];
+          char *colon = strchr(response_data, ':');
+          
+          if (colon) {
+            int id_len = colon - response_data;
+            if (id_len < DEVICE_ID_SIZE) {
+              strncpy(device_id, response_data, id_len);
+              device_id[id_len] = '\0';
+              
+              print_timestamp();
+              printf("[%s] S3 Upload: ", device_id);
+              
+              // Check if SUCCESS or ERROR
+              char *status = colon + 1;
+              if (strncmp(status, "SUCCESS:", 8) == 0) {
+                printf("SUCCESS - %s", status + 8);
+              } else if (strncmp(status, "ERROR:", 6) == 0) {
+                printf("ERROR - %s", status + 6);
+              } else {
+                printf("%s", status);
+              }
+            }
+          }
+        } else if (strncmp(read, "TIME_RESPONSES:", 15) == 0) {
+          // Handle old aggregated format (for compatibility)
+          print_timestamp();
+          printf("Response from server:\n");
+          char *line = strchr(read, '\n');
+          if (line) {
+            line++;  // Skip past newline
+            
+            // Parse each device response
+            while (*line) {
+              char device_id[DEVICE_ID_SIZE];
+              char timestamp[64];
+              char *next_line = strchr(line, '\n');
+              
+              if (next_line) {
+                *next_line = '\0';
+                if (sscanf(line, "%31[^:]:%63s", device_id, timestamp) == 2) {
+                  printf("  [%s] Time: %s\n", device_id, timestamp);
+                }
+                line = next_line + 1;
+              } else {
+                break;
+              }
+            }
+          }
+        } else {
+          print_timestamp();
+          printf("%s", read);
+        }
+        printf("\n");
+      }
+    }
+    
+    // Check for user input
+    if (FD_ISSET(0, &reads)) {
+      char input[256];
+      if (!fgets(input, sizeof(input), stdin)) {
+        break;
+      }
+      
+      // Remove newline
+      size_t len = strlen(input);
+      if (len > 0 && input[len-1] == '\n') {
+        input[len-1] = '\0';
+      }
+      
+      if (strcmp(input, "0") == 0) {
+        printf("Exiting...\n");
+        break;
+      } else if (strcmp(input, "3") == 0) {
+        // Send camera request
+        const char *request = MSG_CAMERA_REQUEST "\n";
+        
+        print_timestamp();
+        printf("Sending CAMERA_REQUEST to relay server...\n");
+        
+        int bytes_sent = sendto(socket_peer, request, strlen(request), 0,
+                              peer_address->ai_addr, peer_address->ai_addrlen);
+        if (bytes_sent < 0) {
+          printf("ERROR: Failed to send request. (%d)\n", GETSOCKETERRNO());
+        } else {
+          printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
+        }
+      } else if (strcmp(input, "4") == 0) {
+        // Send time request
+        const char *request = MSG_TIME_REQUEST "\n";
+        
+        print_timestamp();
+        printf("Sending TIME_REQUEST to relay server...\n");
+        
+        int bytes_sent = sendto(socket_peer, request, strlen(request), 0,
+                              peer_address->ai_addr, peer_address->ai_addrlen);
+        if (bytes_sent < 0) {
+          printf("ERROR: Failed to send request. (%d)\n", GETSOCKETERRNO());
+        } else {
+          printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
+        }
+      } else if (strcmp(input, "5") == 0) {
+        // Send ls request
+        const char *request = MSG_LS_REQUEST "\n";
+        
+        print_timestamp();
+        printf("Sending LS_REQUEST to relay server...\n");
+        
+        int bytes_sent = sendto(socket_peer, request, strlen(request), 0,
+                              peer_address->ai_addr, peer_address->ai_addrlen);
+        if (bytes_sent < 0) {
+          printf("ERROR: Failed to send request. (%d)\n", GETSOCKETERRNO());
+        } else {
+          printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
+        }
+      } else if (strcmp(input, "8") == 0) {
+        // Send S3 upload request
+        const char *request = MSG_S3_UPLOAD_REQUEST "\n";
+        
+        print_timestamp();
+        printf("Sending S3_UPLOAD_REQUEST to relay server...\n");
+        printf("Images will be uploaded to s3://berryscan-dome-scanner/{date}/{time}/\n");
+        
+        int bytes_sent = sendto(socket_peer, request, strlen(request), 0,
+                              peer_address->ai_addr, peer_address->ai_addrlen);
+        if (bytes_sent < 0) {
+          printf("ERROR: Failed to send request. (%d)\n", GETSOCKETERRNO());
+        } else {
+          printf("Request sent (%d bytes). Waiting for responses...\n", bytes_sent);
+        }
+      } else if (strcmp(input, "9") == 0) {
+        print_timestamp();
+        printf("Connected to relay server at %s:%s\n", address_buffer, service_buffer);
+        printf("Socket: %d\n", socket_peer);
+      } else if (strlen(input) > 0) {
+        printf("Unknown command: %s\n", input);
+        printf("Valid commands: [3] camera, [4] time, [5] ls, [8] S3 upload, [9] status, [0] quit\n");
+      }
+    }
+  } // end while(1)
+
+  printf("Closing socket...\n");
+  CLOSESOCKET(socket_peer);
+  freeaddrinfo(peer_address);
+
+  printf("Finished.\n");
+  return 0;
+}
