@@ -2,11 +2,11 @@
 build/
 cmake-build-*/
 out/
-bin/
-lib/*.a
-lib/*.so
-lib/*.dylib
-lib/*.dll
+!bin/
+!lib/*.a
+!lib/*.so
+!lib/*.dylib
+!lib/*.dll
 
 # CMake
 CMakeCache.txt
@@ -93,6 +93,9 @@ logs/
 # Dependency directories
 vendor/
 node_modules/
+!backend/multi-cam/lib/**
+!backend/multi-cam/bin/**
+!backend/multi-cam/test/**
 
 # Python
 __pycache__/
@@ -106,7 +109,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -229,3 +231,49 @@ callgrind.out.*
 cppcheck-*
 
 .env
+
+# ===================================
+# Project-Specific Configuration
+# ===================================
+
+# AWS CDK specific
+backend/multi-cam/cdk.out/
+backend/multi-cam/*.js
+backend/multi-cam/*.d.ts
+!backend/multi-cam/jest.config.js
+!backend/multi-cam/lib/*.ts
+!backend/multi-cam/bin/*.ts
+!backend/multi-cam/test/*.ts
+backend/**/.cdk.staging/
+backend/**/cdk.context.json
+
+# TypeScript
+*.tsbuildinfo
+backend/**/*.js.map
+
+# Frontend (CUI - Console User Interface)
+src/cui/*.o
+src/cui/*.out
+!src/cui/*.c
+!src/cui/*.h
+
+# Keep source code
+!src/**/*.c
+!src/**/*.h
+!inc/**/*.h
+
+# AWS CDK deployment artifacts
+backend/**/.aws-sam/
+backend/**/samconfig.toml
+
+# Keep documentation
+!doc/**/*.md
+!README.md
+!CLAUDE.md
+
+# Keep configuration files
+!CMakeLists.txt
+!package.json
+!tsconfig.json
+!cdk.json
+!jest.config.js

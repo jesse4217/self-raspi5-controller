@@ -1,0 +1,808 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: |-
+  A photogrammetry pipeline
+
+Metadata:
+  cdk_nag:
+    rules_to_suppress:
+      - id: AwsSolutions-IAM4
+        reason: Managed Policy Execption - Required policy for execution roles (Lambda, Batch)
+      - id: AwsSolutions-IAM5
+        reason: Wildcard Permission Execption - Required policy for execution roles (Lambda, Batch)
+
+Parameters:
+  FlowEngineImage:
+    Type: String
+    Default: 709825985650.dkr.ecr.us-east-1.amazonaws.com/3dflow/flowengine:fe6010_02
+    Description: Flowengine Marketplace Image
+    AllowedValues:
+      - 709825985650.dkr.ecr.us-east-1.amazonaws.com/3dflow/flowengine:fe6002_03
+      - 709825985650.dkr.ecr.us-east-1.amazonaws.com/3dflow/flowengine:fe6010_02
+  VPCCidrRange:
+    Type: String
+    Default: 10.0.0.0/22
+    AllowedPattern: ^(([0-9]{1,3})\.){3}[0-9]{1,3}\/[0-9]{1,2}$
+    Description: VPC CIDR Block
+Resources:
+  Log95422804:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      # append StackId hash after flowlogs to ensure a unique name
+      LogGroupName: !Join ['', ['/aws/vpc/flowlogs', '-', !Select [0, !Split ['-', !Select [2, !Split [/, !Ref 'AWS::StackId']]]]]]
+      RetentionInDays: 7
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+  Vpc8378EB38:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref 'VPCCidrRange'
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc
+
+  Vpcprivatesubnet1Subnet1Subnet7990F158:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Select [ 0, !Cidr [ !GetAtt Vpc8378EB38.CidrBlock, 4, 8 ]]
+      VpcId: !Ref 'Vpc8378EB38'
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: aws-cdk:subnet-name
+          Value: private-subnet-1
+        - Key: aws-cdk:subnet-type
+          Value: Private
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/private-subnet-1Subnet1
+
+  Vpcprivatesubnet1Subnet1RouteTableC2C6CCB5:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'Vpc8378EB38'
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/private-subnet-1Subnet1
+
+  Vpcprivatesubnet1Subnet1RouteTableAssociationDEC0878E:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'Vpcprivatesubnet1Subnet1RouteTableC2C6CCB5'
+      SubnetId: !Ref 'Vpcprivatesubnet1Subnet1Subnet7990F158'
+
+  Vpcprivatesubnet1Subnet1DefaultRoute407B91D6:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref 'Vpcprivatesubnet1Subnet1RouteTableC2C6CCB5'
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref 'Vpcpublicsubnet1Subnet1NATGateway44C87C0E'
+
+  Vpcprivatesubnet1Subnet2Subnet2B2C622E:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Select [ 1, !Cidr [ !GetAtt Vpc8378EB38.CidrBlock, 4, 8 ]]
+      VpcId: !Ref 'Vpc8378EB38'
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: aws-cdk:subnet-name
+          Value: private-subnet-1
+        - Key: aws-cdk:subnet-type
+          Value: Private
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/private-subnet-1Subnet2
+
+  Vpcprivatesubnet1Subnet2RouteTable42F8411F:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'Vpc8378EB38'
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/private-subnet-1Subnet2
+
+  Vpcprivatesubnet1Subnet2RouteTableAssociation3CECA2F0:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'Vpcprivatesubnet1Subnet2RouteTable42F8411F'
+      SubnetId: !Ref 'Vpcprivatesubnet1Subnet2Subnet2B2C622E'
+
+  Vpcprivatesubnet1Subnet2DefaultRoute46FBFF61:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref 'Vpcprivatesubnet1Subnet2RouteTable42F8411F'
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref 'Vpcpublicsubnet1Subnet1NATGateway44C87C0E'
+
+  Vpcpublicsubnet1Subnet1Subnet31BCEF8E:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Select [ 2, !Cidr [ !GetAtt Vpc8378EB38.CidrBlock, 4, 8 ]]
+      VpcId: !Ref 'Vpc8378EB38'
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: aws-cdk:subnet-name
+          Value: public-subnet-1
+        - Key: aws-cdk:subnet-type
+          Value: Public
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/public-subnet-1Subnet1
+
+  Vpcpublicsubnet1Subnet1RouteTableD86759EE:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'Vpc8378EB38'
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/public-subnet-1Subnet1
+
+  Vpcpublicsubnet1Subnet1RouteTableAssociation2A6665D1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'Vpcpublicsubnet1Subnet1RouteTableD86759EE'
+      SubnetId: !Ref 'Vpcpublicsubnet1Subnet1Subnet31BCEF8E'
+
+  Vpcpublicsubnet1Subnet1DefaultRoute04100C23:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref 'Vpcpublicsubnet1Subnet1RouteTableD86759EE'
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'VpcIGWD7BA715C'
+    DependsOn:
+      - VpcVPCGWBF912B6E
+
+  Vpcpublicsubnet1Subnet1EIPE484854E:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/public-subnet-1Subnet1
+
+  Vpcpublicsubnet1Subnet1NATGateway44C87C0E:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      SubnetId: !Ref 'Vpcpublicsubnet1Subnet1Subnet31BCEF8E'
+      AllocationId: !GetAtt 'Vpcpublicsubnet1Subnet1EIPE484854E.AllocationId'
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/public-subnet-1Subnet1
+
+  Vpcpublicsubnet1Subnet2Subnet859B55C3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: !Select [ 3, !Cidr [ !GetAtt Vpc8378EB38.CidrBlock, 4, 8 ]]
+      VpcId: !Ref 'Vpc8378EB38'
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: aws-cdk:subnet-name
+          Value: public-subnet-1
+        - Key: aws-cdk:subnet-type
+          Value: Public
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/public-subnet-1Subnet2
+
+  Vpcpublicsubnet1Subnet2RouteTableABC78AC6:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref 'Vpc8378EB38'
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc/public-subnet-1Subnet2
+
+  Vpcpublicsubnet1Subnet2RouteTableAssociationE4B4DB02:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref 'Vpcpublicsubnet1Subnet2RouteTableABC78AC6'
+      SubnetId: !Ref 'Vpcpublicsubnet1Subnet2Subnet859B55C3'
+
+  Vpcpublicsubnet1Subnet2DefaultRoute6B40B392:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref 'Vpcpublicsubnet1Subnet2RouteTableABC78AC6'
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref 'VpcIGWD7BA715C'
+    DependsOn:
+      - VpcVPCGWBF912B6E
+
+  VpcIGWD7BA715C:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: flowengine-pipeline/Vpc
+
+  VpcVPCGWBF912B6E:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref 'Vpc8378EB38'
+      InternetGatewayId: !Ref 'VpcIGWD7BA715C'
+  Vpcs3IAMRoleA086B314:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+        Version: '2012-10-17'
+      Tags:
+        - Key: Name
+          Value: stack-name/Vpc
+  Vpcs3IAMRoleDefaultPolicy5A5E0167:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:DescribeLogStreams
+            Effect: Allow
+            Resource: !GetAtt 'Log95422804.Arn'
+          - Action: iam:PassRole
+            Effect: Allow
+            Resource: !GetAtt 'Vpcs3IAMRoleA086B314.Arn'
+        Version: '2012-10-17'
+      PolicyName: Vpcs3IAMRoleDefaultPolicy5A5E0167
+      Roles:
+        - !Ref 'Vpcs3IAMRoleA086B314'
+  Vpcs3FlowLogDC33245A:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceId: !Ref 'Vpc8378EB38'
+      ResourceType: VPC
+      TrafficType: ALL
+      DeliverLogsPermissionArn: !GetAtt 'Vpcs3IAMRoleA086B314.Arn'
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref 'Log95422804'
+      Tags:
+        - Key: Name
+          Value: stack-name/Vpc
+
+  IngestionBucketLogs16C568AB:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: LogDeliveryWrite
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+
+  IngestionBucketNotificationsF5F9F5B4:
+    Type: Custom::S3BucketNotifications
+    Properties:
+      ServiceToken: !GetAtt 'BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691.Arn'
+      BucketName: !Ref 'IngestionBucket917A3A3A'
+      NotificationConfiguration:
+        LambdaFunctionConfigurations:
+          - Events:
+              - s3:ObjectCreated:*
+            Filter:
+              Key:
+                FilterRules:
+                  - Name: suffix
+                    Value: .zip
+            LambdaFunctionArn: !GetAtt 'UploadDatasetEventA9C95217.Arn'
+      Managed: true
+    DependsOn:
+      - IngestionBucketAllowBucketNotificationsToflowenginepipelineUploadDatasetEventB3784C0998704AB0
+
+  IngestionBucket917A3A3A:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LoggingConfiguration:
+        DestinationBucketName: !Ref 'IngestionBucketLogs16C568AB'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+
+  IngestionBucketAllowBucketNotificationsToflowenginepipelineUploadDatasetEventB3784C0998704AB0:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt 'UploadDatasetEventA9C95217.Arn'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !GetAtt 'IngestionBucket917A3A3A.Arn'
+
+  LambdaRole3A44B857:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: '2012-10-17'
+      Description: EC2 Instance Role
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: s3:*
+                Effect: Allow
+                Resource:
+                  - !Sub '${IngestionBucket917A3A3A.Arn}/*'
+                  - !GetAtt 'IngestionBucket917A3A3A.Arn'
+            Version: '2012-10-17'
+          PolicyName: IngestionBucketObjectPolicy
+
+  LambdaRoleDefaultPolicy75625A82:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - batch:SubmitJob
+              - batch:DescribeJobs
+            Effect: Allow
+            Resource:
+              - !Ref 'BatchJobDef0BB5F6F7'
+              - !Ref 'BatchJobQueueCDF09A33'
+        Version: '2012-10-17'
+      PolicyName: LambdaRoleDefaultPolicy75625A82
+      Roles:
+        - !Ref 'LambdaRole3A44B857'
+
+  InstanceRole3CCE2F1D:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: !Sub 'ec2.${AWS::URLSuffix}'
+        Version: '2012-10-17'
+      Description: EC2 Instance Role
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: s3:*
+                Effect: Allow
+                Resource:
+                  - !Sub '${IngestionBucket917A3A3A.Arn}/*'
+                  - !GetAtt 'IngestionBucket917A3A3A.Arn'
+            Version: '2012-10-17'
+          PolicyName: IngestionBucketObjectPolicy
+
+  BatchRoleC28B5511:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: batch.amazonaws.com
+        Version: '2012-10-17'
+      Description: Batch Service Role
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSBatchServiceRole'
+
+  BatchJobRole37A83758:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+        Version: '2012-10-17'
+      Description: ECS Task Role
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AWSMarketplaceMeteringRegisterUsage'
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Action: s3:*
+                Effect: Allow
+                Resource:
+                  - !Sub '${IngestionBucket917A3A3A.Arn}/*'
+                  - !GetAtt 'IngestionBucket917A3A3A.Arn'
+            Version: '2012-10-17'
+          PolicyName: IngestionBucketObjectPolicy
+
+  UploadDatasetEventA9C95217:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import os
+          import json
+          import logging
+          import traceback
+
+          import boto3
+          from botocore.config import Config
+
+          LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+          logger = logging.getLogger()
+          logger.setLevel(LOG_LEVEL)
+
+          JOB_QUEUE = os.environ['JOB_QUEUE']
+          JOB_DEFINITION = os.environ['JOB_DEFINITION']
+
+          BATCH_CLIENT = boto3.client('batch', config=Config(
+              retries = {
+                  'max_attempts': 3
+              }
+          ))
+
+          def main(event, context) -> dict:
+
+              record = event['Records'][0]
+
+              region = record['awsRegion']
+              bucket_name = record['s3']['bucket']['name']
+              object_key = record['s3']['object']['key']
+
+              project_name = os.path.dirname(object_key)
+              basename = os.path.basename(object_key)
+              ext_split = basename.split('.')
+              filename = ext_split[0]
+              ext = '.'.join(ext_split[1:]) # rejoin multiple part ext, eg .tar.gz
+
+              if filename != project_name and ext != 'zip':
+                  raise Exception(f'Invalid object key: {object_key}, \
+                  flowengine expects bucket/project_name/project_name.zip')
+
+              # job_name: The first character must be alphanumeric, and up to 128 letters
+              # (uppercase and lowercase), numbers, hyphens, and underscores are allowed.
+              job_name = f'photogr-3dflow-{project_name}'.replace('/', '-')
+
+              result = f'Submitting {job_name} to the job queue {JOB_QUEUE} ... '
+
+              submit_job_response = BATCH_CLIENT.submit_job(
+                  jobName=job_name,
+                  jobQueue=JOB_QUEUE,
+                  jobDefinition=JOB_DEFINITION,
+                  containerOverrides={
+                      'environment': [{
+                          'name': 'PROJECTNAME',
+                          'value': project_name
+                      },{
+                          'name': 'S3BUCKET',
+                          'value': bucket_name
+                      },{
+                          'name': 'S3REGION',
+                          'value': region
+                      },{
+                          'name': 'PROJECTCOMPUTEPHASE',
+                          'value': '4'
+                      },{
+                          'name': 'PROJECTEXPORTPHASE',
+                          'value': '5'
+                      }]
+                  }
+              )
+              job_id = submit_job_response['jobId']
+              result = f'Succesfully submitted job {job_name} {job_id} to the job queue {JOB_QUEUE}'
+              logger.info(result)
+
+              return {'Success': result}
+
+
+          def lambda_handler(event, context) -> dict:
+              '''
+              Lambda Handler - Wraps main function so we can catch all unhandled errors and return a generic error
+              '''
+
+              logger.info('Lambda Event: %s', json.dumps(event, indent=2))
+
+              headers = {}
+
+              try:
+                  body = main(event, context)
+              except Exception as error:
+                  logger.warning(traceback.format_exc())
+                  logger.error(error)
+                  return {
+                      "statusCode": 400,
+                      "headers": headers,
+                      "body": json.dumps({"Error": "Internal Server Error"}),
+                  }
+
+              return {
+                  "statusCode": 200,
+                  "headers": headers,
+                  "body": json.dumps(body),
+              }
+      Role: !GetAtt 'LambdaRole3A44B857.Arn'
+      Environment:
+        Variables:
+          JOB_DEFINITION: !Ref 'BatchJobDef0BB5F6F7'
+          JOB_QUEUE: !Ref 'BatchJobQueueCDF09A33'
+      Handler: index.lambda_handler
+      Runtime: python3.9
+    DependsOn:
+      - LambdaRoleDefaultPolicy75625A82
+
+  UploadDatasetEventLogGroup93293992:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${UploadDatasetEventA9C95217}'
+
+      RetentionInDays: 7
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+
+  BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+
+  BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: s3:PutBucketNotification
+            Effect: Allow
+            Resource: '*'
+        Version: '2012-10-17'
+      PolicyName: BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36
+      Roles:
+        - !Ref 'BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC'
+
+  BucketNotificationsHandler050a0587b7544547bf325f094a3db8347ECC3691:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: AWS CloudFormation handler for "Custom::S3BucketNotifications" resources (@aws-cdk/aws-s3)
+      Code:
+        ZipFile: |
+          import boto3  # type: ignore
+          import json
+          import logging
+          import urllib.request
+
+          s3 = boto3.client("s3")
+
+          CONFIGURATION_TYPES = ["TopicConfigurations", "QueueConfigurations", "LambdaFunctionConfigurations"]
+
+          def handler(event: dict, context):
+              response_status = "SUCCESS"
+              error_message = ""
+              try:
+                  props = event["ResourceProperties"]
+                  bucket = props["BucketName"]
+                  notification_configuration = props["NotificationConfiguration"]
+                  request_type = event["RequestType"]
+                  managed = props.get('Managed', 'true').lower() == 'true'
+                  stack_id = event['StackId']
+
+                  if managed:
+                    config = handle_managed(request_type, notification_configuration)
+                  else:
+                    config = handle_unmanaged(bucket, stack_id, request_type, notification_configuration)
+
+                  put_bucket_notification_configuration(bucket, config)
+              except Exception as e:
+                  logging.exception("Failed to put bucket notification configuration")
+                  response_status = "FAILED"
+                  error_message = f"Error: {str(e)}. "
+              finally:
+                  submit_response(event, context, response_status, error_message)
+
+
+          def handle_managed(request_type, notification_configuration):
+            if request_type == 'Delete':
+              return {}
+            return notification_configuration
+
+
+          def handle_unmanaged(bucket, stack_id, request_type, notification_configuration):
+
+            # find external notifications
+            external_notifications = find_external_notifications(bucket, stack_id)
+
+            # if delete, that's all we need
+            if request_type == 'Delete':
+              return external_notifications
+
+            def with_id(notification):
+              notification['Id'] = f"{stack_id}-{hash(json.dumps(notification, sort_keys=True))}"
+              return notification
+
+            # otherwise, merge external with incoming config and augment with id
+            notifications = {}
+            for t in CONFIGURATION_TYPES:
+              external = external_notifications.get(t, [])
+              incoming = [with_id(n) for n in notification_configuration.get(t, [])]
+              notifications[t] = external + incoming
+            return notifications
+
+
+          def find_external_notifications(bucket, stack_id):
+            existing_notifications = get_bucket_notification_configuration(bucket)
+            external_notifications = {}
+            for t in CONFIGURATION_TYPES:
+              # if the notification was created by us, we know what id to expect
+              # so we can filter by it.
+              external_notifications[t] = [n for n in existing_notifications.get(t, []) if not n['Id'].startswith(f"{stack_id}-")]
+
+            return external_notifications
+
+
+          def get_bucket_notification_configuration(bucket):
+            return s3.get_bucket_notification_configuration(Bucket=bucket)
+
+
+          def put_bucket_notification_configuration(bucket, notification_configuration):
+            s3.put_bucket_notification_configuration(Bucket=bucket, NotificationConfiguration=notification_configuration)
+
+
+          def submit_response(event: dict, context, response_status: str, error_message: str):
+              response_body = json.dumps(
+                  {
+                      "Status": response_status,
+                      "Reason": f"{error_message}See the details in CloudWatch Log Stream: {context.log_stream_name}",
+                      "PhysicalResourceId": event.get("PhysicalResourceId") or event["LogicalResourceId"],
+                      "StackId": event["StackId"],
+                      "RequestId": event["RequestId"],
+                      "LogicalResourceId": event["LogicalResourceId"],
+                      "NoEcho": False,
+                  }
+              ).encode("utf-8")
+              headers = {"content-type": "", "content-length": str(len(response_body))}
+              try:
+                  req = urllib.request.Request(url=event["ResponseURL"], headers=headers, data=response_body, method="PUT")
+                  with urllib.request.urlopen(req) as response:
+                      print(response.read().decode("utf-8"))
+                  print("Status code: " + response.reason)
+              except Exception as e:
+                  print("send(..) failed executing request.urlopen(..): " + str(e))
+      Handler: index.handler
+      Role: !GetAtt 'BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleB6FB88EC.Arn'
+      Runtime: python3.7
+      Timeout: 300
+    DependsOn:
+      - BucketNotificationsHandler050a0587b7544547bf325f094a3db834RoleDefaultPolicy2CF63D36
+
+  BatchComputeSG17EE73BF:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Batch Compute Resources Security Group
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic by default
+          IpProtocol: "-1"
+      VpcId:
+        Ref: Vpc8378EB38
+  BatchComputeProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref 'InstanceRole3CCE2F1D'
+
+  BatchComputeEnvD1FB723B:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      Type: MANAGED
+      ComputeEnvironmentName: 3DFlowComputeEnvironment
+      ComputeResources:
+        AllocationStrategy: BEST_FIT
+        DesiredvCpus: 0
+        InstanceRole: !GetAtt 'BatchComputeProfile.Arn'
+        InstanceTypes:
+          - g4dn.2xlarge
+        MaxvCpus: 32
+        MinvCpus: 0
+        SecurityGroupIds:
+          - !GetAtt 'BatchComputeSG17EE73BF.GroupId'
+        Subnets:
+          - !Ref 'Vpcprivatesubnet1Subnet1Subnet7990F158'
+          - !Ref 'Vpcprivatesubnet1Subnet2Subnet2B2C622E'
+        Tags:
+          Name: BatchInstance
+        Type: EC2
+      ServiceRole: !GetAtt 'BatchRoleC28B5511.Arn'
+      State: ENABLED
+    DependsOn:
+      - VpcIGWD7BA715C
+      - Vpcprivatesubnet1Subnet1DefaultRoute407B91D6
+      - Vpcprivatesubnet1Subnet1RouteTableC2C6CCB5
+      - Vpcprivatesubnet1Subnet1RouteTableAssociationDEC0878E
+      - Vpcprivatesubnet1Subnet2DefaultRoute46FBFF61
+      - Vpcprivatesubnet1Subnet2RouteTable42F8411F
+      - Vpcprivatesubnet1Subnet2RouteTableAssociation3CECA2F0
+      - Vpcpublicsubnet1Subnet1DefaultRoute04100C23
+      - Vpcpublicsubnet1Subnet1EIPE484854E
+      - Vpcpublicsubnet1Subnet1NATGateway44C87C0E
+      - Vpcpublicsubnet1Subnet1RouteTableD86759EE
+      - Vpcpublicsubnet1Subnet1RouteTableAssociation2A6665D1
+      - Vpcpublicsubnet1Subnet1Subnet31BCEF8E
+      - Vpcpublicsubnet1Subnet2DefaultRoute6B40B392
+      - Vpcpublicsubnet1Subnet2RouteTableABC78AC6
+      - Vpcpublicsubnet1Subnet2RouteTableAssociationE4B4DB02
+      - Vpcpublicsubnet1Subnet2Subnet859B55C3
+      - Vpc8378EB38
+      - VpcVPCGWBF912B6E
+
+  BatchJobDef0BB5F6F7:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      ContainerProperties:
+        Image: !Ref 'FlowEngineImage'
+        JobRoleArn: !GetAtt 'BatchJobRole37A83758.Arn'
+        Privileged: false
+        ReadonlyRootFilesystem: false
+        ResourceRequirements:
+          - Type: VCPU
+            Value: '8'
+          - Type: MEMORY
+            Value: '30000'
+          - Type: GPU
+            Value: '1'
+      JobDefinitionName: 3DFlowJob
+      PlatformCapabilities:
+        - EC2
+      RetryStrategy:
+        Attempts: 2
+      Timeout: {}
+
+  BatchJobQueueCDF09A33:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      ComputeEnvironmentOrder:
+        - ComputeEnvironment: !Ref 'BatchComputeEnvD1FB723B'
+          Order: 1
+      Priority: 1
+      JobQueueName: 3DFlowQueue
+      State: ENABLED
+
+Outputs:
+  IngestionBucketName:
+    Description: Amazon S3 Bucket for image dataset ingestion
+    Value: !Ref 'IngestionBucket917A3A3A'
+    Export:
+      Name: IngestionBucketName
+  LogsBucketName:
+    Value:
+      Ref: IngestionBucketLogs16C568AB
+    Export:
+      Name: LogsBucketName
+
