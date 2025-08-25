@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import 'dotenv/config'; // Load .env file
 import * as cdk from 'aws-cdk-lib';
 import { MultiCamStack } from '../lib/multi-cam-stack';
 
@@ -8,9 +9,11 @@ new MultiCamStack(app, 'MultiCamStack', {
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+  /* Using environment variables from .env file or AWS CLI configuration */
+  env: { 
+    account: process.env.AWS_ACCOUNT_ID || process.env.CDK_DEFAULT_ACCOUNT, 
+    region: process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION 
+  },
 
   /* Uncomment the next line if you know exactly what Account and Region you
    * want to deploy the stack to. */
