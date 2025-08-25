@@ -51,6 +51,7 @@ file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/client)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/common)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/hq-cam-controller)
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/pi-zero-libcam)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin/multi-cam)
 
 # Include directories
 include_directories(${PROJECT_SOURCE_DIR}/inc)
@@ -128,12 +129,23 @@ if(HQ_CAM_SOURCES)
     endforeach()
 endif()
 
-# Pi Zero LibCam executables (including time system)
+# Multi-Camera System executables
+file(GLOB MULTI_CAM_SOURCES "src/multi-cam/*.c")
+if(MULTI_CAM_SOURCES)
+    foreach(MULTI_CAM_SOURCE ${MULTI_CAM_SOURCES})
+        get_filename_component(MULTI_CAM_NAME ${MULTI_CAM_SOURCE} NAME_WE)
+        # Use prefixed target name internally, but output with clean name
+        add_executable(multi_cam_${MULTI_CAM_NAME} ${MULTI_CAM_SOURCE})
+        target_link_libraries(multi_cam_${MULTI_CAM_NAME} ${PLATFORM_LIBS})
+        set_target_properties(multi_cam_${MULTI_CAM_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/multi-cam
+            OUTPUT_NAME ${MULTI_CAM_NAME})
+    endforeach()
+endif()
+
+# Pi Zero LibCam executables
 file(GLOB PI_ZERO_SOURCES "src/app/pi-zero-libcam/*.c")
 if(PI_ZERO_SOURCES)
-    # Include directory for time_protocol.h
-    include_directories(${PROJECT_SOURCE_DIR}/src/app/pi-zero-libcam)
-    
     foreach(PI_ZERO_SOURCE ${PI_ZERO_SOURCES})
         get_filename_component(PI_ZERO_NAME ${PI_ZERO_SOURCE} NAME_WE)
         # Use prefixed target name internally, but output with clean name

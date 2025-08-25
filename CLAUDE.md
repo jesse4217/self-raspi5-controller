@@ -19,14 +19,26 @@ make -j$(nproc)
 make server_udp_serve_toupper  # Server executable
 make client_udp_client          # Client executable
 make common_socket_init         # Common utility
+
+# Build multi-camera UDP system
+make pi_zero_time_relay_server  # Central relay server
+make pi_zero_time_main_client   # Main client interface
+make pi_zero_time_sub_client    # Raspberry Pi sub-clients
 ```
 
 ### Build Output Structure
 ```
 build/bin/
-├── client/   # Client executables
-├── server/   # Server executables
-└── common/   # Common utilities
+├── client/         # Basic client executables
+├── server/         # Basic server executables
+├── common/         # Common utilities
+├── hq-cam-controller/  # HQ camera controller
+└── pi-zero-libcam/ # Multi-camera UDP system (NEW)
+    ├── time_relay_server    # Central relay server
+    ├── time_main_client     # Main client interface
+    ├── time_sub_client      # Raspberry Pi sub-clients
+    ├── pi_client           # Original Pi client
+    └── pi_server           # Original Pi server
 ```
 
 ### Running Tests
@@ -41,20 +53,22 @@ cd build && ctest
 ## Architecture Overview
 
 ### Module Organization
-The codebase implements network programming examples with UDP/TCP functionality, organized into three main modules:
+The codebase implements network programming examples with UDP/TCP functionality, organized into modular components:
 
-1. **Common** (`src/common/`): Cross-platform socket initialization and utilities
-   - `socket_init.c`: Platform-specific socket API initialization
-   - `time_server*.c`: Time server implementations (IPv4/IPv6/dual-stack)
-   - `addr_list.c`: Address list management utilities
+1. **Common** (`src/common/`): Cross-platform socket utilities (REORGANIZED)
+   - `timer/`: Time server implementations (IPv4/IPv6/dual-stack)
+     - `socket_init.c`: Platform-specific socket API initialization
+     - `time_server*.c`: Various time server implementations
+     - `addr_list.c`: Address list management utilities
+   - `client/`: Basic UDP/TCP client implementations
+   - `server/`: Basic UDP/TCP server implementations
 
-2. **Client** (`src/client/`): UDP client implementations
-   - Each file is a standalone executable demonstrating specific UDP operations
-   - Programs include sendto, recvfrom, and echo client examples
-
-3. **Server** (`src/server/`): UDP server implementations
-   - Mirror implementations of client programs from server perspective
-   - Note: Currently contains duplicated code from client directory
+2. **Multi-Camera System** (`src/multi-cam/`): **NEW** - Advanced UDP relay system
+   - `time_protocol.h`: Protocol definitions and message types
+   - `time_relay_server.c`: Central relay server with client registry
+   - `time_main_client.c`: Interactive main client with number commands
+   - `time_sub_client.c`: Raspberry Pi sub-clients with remote command execution
+   - `pi_client.c` / `pi_server.c`: Original Pi implementations
 
 ### Cross-Platform Abstraction
 The codebase uses preprocessor macros for Windows/Unix compatibility:
@@ -71,10 +85,10 @@ The analysis report (`docs/sc-init.md`) identifies critical buffer overflow vuln
 4. Never trust network input
 
 ### Known Issues
-- **Code Duplication**: ~30% duplicate code between client/server directories
+- **Code Duplication**: ~30% duplicate code between client/server directories (partially resolved)
 - **Hard-coded Values**: Port 8080 and buffer sizes are magic numbers throughout
-- **Missing Validation**: No input validation on command-line arguments or network data
-- **Single-threaded**: All servers are single-threaded with synchronous I/O
+- **Missing Validation**: No input validation on command-line arguments or network data (improved in multi-cam)
+- **Single-threaded**: All servers are single-threaded with synchronous I/O (addressed with select() in multi-cam)
 
 ## Development Guidelines
 
